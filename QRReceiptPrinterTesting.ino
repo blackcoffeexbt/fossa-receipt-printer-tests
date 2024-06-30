@@ -3,43 +3,48 @@
 
 
 //THERMAL PRINTER SETTINGS
-#define RXP 26  //define the GPIO connected TO the TX of the thermal printer
-#define TXP 27   //define the GPIO connected TO the RX of the thermal printer
+#define RXP 17  //define the GPIO connected TO the TX of the thermal printer
+#define TXP 4   //define the GPIO connected TO the RX of the thermal printer
 
 String qrData;
 
-Adafruit_Thermal printer(&Serial);      
+HardwareSerial printerSerial(1); // Declare HardwareSerial obj first
+Adafruit_Thermal printer(&printerSerial);     // Pass addr to printer constructor
 
 void setup() {
-  // put your setup code here, to run once:
+  Serial.begin(115200);
+  delay(1000);
+  Serial.println("Setup");
 
-  printer.feed(2);
+printerSerial.begin(9600, SERIAL_8N1, RXP, TXP);
+printer.begin();
 
-  Serial.begin(19200, SERIAL_8N1, RXP, TXP);
-
-  printThing();
+//  printer.wake();
+//    printer.print("Hello people");
+//    printer.sleep();
 
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-  while(true);
+  Serial.println("Loop");
+  printThing();
+  delay(20000);
 }
 
 bool checkForError() {
   // Transmit the real-time transmission status command for the specified status
   const byte transmitStatusCommand[] = { 0x10, 0x04, 0x01 };
   const byte clearData[] = { 0x1B, 0x40 };  // clear data in buffer
-  Serial.write(transmitStatusCommand, sizeof(transmitStatusCommand));
+  printerSerial.write(transmitStatusCommand, sizeof(transmitStatusCommand));
 
   delay(50);
 
-  if (Serial.available()) {
-    byte response = Serial.read();
+  if (printerSerial.available()) {
+    byte response = printerSerial.read();
 
     if (response != 0x12) {
 
-      Serial.write(clearData, sizeof(clearData));
+      printerSerial.write(clearData, sizeof(clearData));
       return true;
     }
   }
@@ -67,17 +72,6 @@ byte lookup(char character) {
   return 0x00;
 }
 
-void printThing() {
-    printer.setSize('L');  // Set type size to large
-  printer.justify('C');  // Center align text
-  printer.feed(3);
-  printer.boldOn();
-  printer.println("Bitcoin");
-  printer.println("Lightning ATM");
-
-  qrData = "This is some data";
-
-}
 
 void printEncodedString(const String& str) {
   for (int i = 0; i < str.length(); i++) {
@@ -97,13 +91,32 @@ void printQRcode(String qrData, byte size = 6, bool isMainQR = true) {
   const byte eccCommand[] = { 0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x33 };  // Error correction
   const byte printCommand[] = { 0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30 };
 
-  Serial.write(modelCommand, sizeof(modelCommand));
-  Serial.write(eccCommand, sizeof(eccCommand));
+  printerSerial.write(modelCommand, sizeof(modelCommand));
+  printerSerial.write(eccCommand, sizeof(eccCommand));
 
   int len = qrData.length() + 3;
   byte dataCommand[] = { 0x1D, 0x28, 0x6B, (byte)len, 0x00, 0x31, 0x50, 0x30 };
-  Serial.write(dataCommand, sizeof(dataCommand));
-  Serial.print(qrData);
+  printerSerial.write(dataCommand, sizeof(dataCommand));
+  printerSerial.print(qrData);
 
-  Serial.write(printCommand, sizeof(printCommand));
+  printerSerial.write(printCommand, sizeof(printCommand));
+}
+
+void printThing() {
+//  printer.wake();
+//  printer.setSize('L');  // Set type size to large
+//  printer.justify('C');  // Center align text
+//  printer.feed(3);
+//  printer.boldOn();
+//  printer.println("FOSSA");
+  printer.feed(1);
+
+  qrData = "Make FOSSA great again";
+
+  printQRcode(qrData);
+
+//  printer.feed(3);
+
+//  printer.sleep();
+
 }
