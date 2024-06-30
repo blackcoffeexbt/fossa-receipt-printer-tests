@@ -1,6 +1,6 @@
 #include <Adafruit_Thermal.h>
 #include <HardwareSerial.h>
-
+#include "lnbits_logo.h"
 
 //THERMAL PRINTER SETTINGS
 #define RXP 17  //define the GPIO connected TO the TX of the thermal printer
@@ -103,20 +103,31 @@ void printQRcode(String qrData, byte size = 6, bool isMainQR = true) {
 }
 
 void printThing() {
-//  printer.wake();
-//  printer.setSize('L');  // Set type size to large
-//  printer.justify('C');  // Center align text
-//  printer.feed(3);
-//  printer.boldOn();
-//  printer.println("FOSSA");
+  printer.wake();
+
+  printer.setDefault();
+  printer.printBitmap(adalogo_width, adalogo_height, adalogo_data);
+  
+  printer.setSize('L');  // Set type size to large
+  printer.justify('C');  // Center align text
+  printer.feed(3);
+  
+//  printer.printBitmap(lnbits_logo_width, lnbits_logo_height, lnbits_logo_data);
+//  printer.feed(1);
+  printer.boldOn();
+  printer.println("FOSSA");
   printer.feed(1);
 
-  qrData = "Make FOSSA great again";
+  qrData = "LNURL1DP68GURN8GHJ7UMPW3EJUURH9AKXUATJD3CZ7DR9WFG525GHL45S8";
 
   printQRcode(qrData);
+  printer.feed(1);
+  printer.setSize('M');  // Set type size to large
+  printer.println("Scan me with a");
+  printer.println("Lightning Wallet");
 
-//  printer.feed(3);
+  printer.feed(3);
 
-//  printer.sleep();
+  printer.sleep();
 
 }
