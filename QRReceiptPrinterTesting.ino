@@ -131,7 +131,9 @@ void printThing() {
   printer.setSize('S');
   printer.println("This voucher can be redeemed for 5.50 GBP of Bitcoin");
   printer.feed(1);
+  printer.underlineOn();
   printer.println("Scan me to get your Bitcoin");
+  printer.underlineOff();
   printer.feed(1);
 
   qrData = "https://demo.lnbits.com/lnurldevice/atm?lightning=LNURL1DP68GURN8GHJ7UMPW3EJUURH9AKXUATJD3CZ7DR9WFG525GHL45S8";
@@ -139,7 +141,6 @@ void printThing() {
   printQRcode(qrData);
   printer.boldOff();
   printer.feed(1);
-  printer.println("------------------");
   printer.justify('L');
   printer.println(getRandomQuote());
   printer.feed(3);
