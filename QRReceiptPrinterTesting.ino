@@ -1,10 +1,11 @@
 #include <Adafruit_Thermal.h>
 #include <HardwareSerial.h>
 #include "lnbits_logo.h"
+#include "quotes.h"
 
 //THERMAL PRINTER SETTINGS
-#define RXP 17  //define the GPIO connected TO the TX of the thermal printer
-#define TXP 4   //define the GPIO connected TO the RX of the thermal printer
+#define RXP 14  //define the GPIO connected TO the TX of the thermal printer
+#define TXP 27   //define the GPIO connected TO the RX of the thermal printer
 
 String qrData;
 
@@ -12,6 +13,7 @@ HardwareSerial printerSerial(1); // Declare HardwareSerial obj first
 Adafruit_Thermal printer(&printerSerial);     // Pass addr to printer constructor
 
 void setup() {
+  delay(1000);
   Serial.begin(115200);
   delay(1000);
   Serial.println("Setup");
@@ -28,12 +30,12 @@ printer.begin();
 void loop() {
   Serial.println("Loop");
   printThing();
-  delay(20000);
+  delay(5000);
 }
 
 bool checkForError() {
   // Transmit the real-time transmission status command for the specified status
-  const byte transmitStatusCommand[] = { 0x10, 0x04, 0x01 };
+  const byte transmitStatusCommand[] = { 0x10, 0x04, 0x01 }; 
   const byte clearData[] = { 0x1B, 0x40 };  // clear data in buffer
   printerSerial.write(transmitStatusCommand, sizeof(transmitStatusCommand));
 
@@ -85,16 +87,27 @@ void printEncodedString(const String& str) {
   }
 }
 
-void printQRcode(String qrData, byte size = 6, bool isMainQR = true) {
-  // Adjust the size command based on whether it's the main or smaller QR
-  const byte modelCommand[] = { 0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, size };
-  const byte eccCommand[] = { 0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x33 };  // Error correction
+void printQRcode(String qrData, byte size = 2, bool isMainQR = true) {
+  // Using a smaller size or adjusting based on isMainQR
+  byte adjustedSize = isMainQR ? size : max(1, size - 10); // Ensure minimum size of 1
+
+  // Adjust error correction: L (0x31), M (0x32), Q (0x33), H (0x34)
+  byte eccLevel = 0x31; // Start with low and increase if errors persist
+
+  // Commands setup
+  const byte modelCommand[] = { 0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, adjustedSize };
+  const byte eccCommand[] = { 0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, eccLevel };
   const byte printCommand[] = { 0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30 };
 
   printerSerial.write(modelCommand, sizeof(modelCommand));
   printerSerial.write(eccCommand, sizeof(eccCommand));
 
   int len = qrData.length() + 3;
+  if (len > 255) {
+    // Simple error handling for data that is too large
+    Serial.println("Data too long for a single QR code!");
+    return;
+  }
   byte dataCommand[] = { 0x1D, 0x28, 0x6B, (byte)len, 0x00, 0x31, 0x50, 0x30 };
   printerSerial.write(dataCommand, sizeof(dataCommand));
   printerSerial.print(qrData);
@@ -106,26 +119,29 @@ void printThing() {
   printer.wake();
 
   printer.setDefault();
-  printer.printBitmap(adalogo_width, adalogo_height, adalogo_data);
+
   
-  printer.setSize('L');  // Set type size to large
   printer.justify('C');  // Center align text
   printer.feed(3);
   
-//  printer.printBitmap(lnbits_logo_width, lnbits_logo_height, lnbits_logo_data);
-//  printer.feed(1);
   printer.boldOn();
-  printer.println("FOSSA");
+  printer.setSize('L');
+  printer.println("Thank you");
+  printer.feed(1);
+  printer.setSize('S');
+  printer.println("This voucher can be redeemed for 5.50 GBP of Bitcoin");
+  printer.feed(1);
+  printer.println("Scan me to get your Bitcoin");
   printer.feed(1);
 
-  qrData = "LNURL1DP68GURN8GHJ7UMPW3EJUURH9AKXUATJD3CZ7DR9WFG525GHL45S8";
+  qrData = "https://demo.lnbits.com/lnurldevice/atm?lightning=LNURL1DP68GURN8GHJ7UMPW3EJUURH9AKXUATJD3CZ7DR9WFG525GHL45S8";
 
   printQRcode(qrData);
+  printer.boldOff();
   printer.feed(1);
-  printer.setSize('M');  // Set type size to large
-  printer.println("Scan me with a");
-  printer.println("Lightning Wallet");
-
+  printer.println("------------------");
+  printer.justify('L');
+  printer.println(getRandomQuote());
   printer.feed(3);
 
   printer.sleep();
